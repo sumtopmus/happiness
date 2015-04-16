@@ -8,26 +8,20 @@
 
 import UIKit
 
+protocol FaceViewDataSource: class {
+    func smilinessForFaceView(sender: FaceView) -> Double?
+}
+
+@IBDesignable
 class FaceView: UIView {
 
-    var lineWidth: CGFloat = 3 {
-        didSet {
-            setNeedsDisplay()
-        }
-    }
-
-    var color: UIColor = UIColor.blueColor() {
-        didSet {
-            setNeedsDisplay()
-        }
-    }
-
-    var scale: CGFloat = 0.90 {
-        didSet {
-            setNeedsDisplay()
-        }
-    }
-
+    @IBInspectable
+    var lineWidth: CGFloat = 3 { didSet { setNeedsDisplay() } }
+    @IBInspectable
+    var color: UIColor = UIColor.blueColor()  { didSet { setNeedsDisplay() } }
+    @IBInspectable
+    var scale: CGFloat = 0.90 { didSet { setNeedsDisplay() } }
+    
     var faceCenter: CGPoint {
         return convertPoint(center, fromView: superview)
     }
@@ -47,6 +41,28 @@ class FaceView: UIView {
 
     private enum Eye {
         case Left, Right
+    }
+
+    weak var dataSource: FaceViewDataSource?
+
+    func scale(gesture: UIPinchGestureRecognizer) {
+        if gesture.state == .Changed {
+            scale *= gesture.scale
+            gesture.scale = 1
+        }
+    }
+
+    override func drawRect(rect: CGRect) {
+        let facePath = UIBezierPath(arcCenter: faceCenter, radius: faceRadius, startAngle: 0, endAngle: CGFloat(2*M_PI), clockwise: true)
+        facePath.lineWidth = lineWidth
+        color.set()
+        facePath.stroke()
+
+        bezierPathForEye(.Left).stroke()
+        bezierPathForEye(.Right).stroke()
+
+        let smiliness = dataSource?.smilinessForFaceView(self) ?? 0.0
+        bezierPathForSmile(smiliness).stroke()
     }
 
     private func bezierPathForEye(whichEye: Eye) -> UIBezierPath {
@@ -88,18 +104,5 @@ class FaceView: UIView {
 
         return path
 
-    }
-
-    override func drawRect(rect: CGRect) {
-        let facePath = UIBezierPath(arcCenter: faceCenter, radius: faceRadius, startAngle: 0, endAngle: CGFloat(2*M_PI), clockwise: true)
-        facePath.lineWidth = lineWidth
-        color.set()
-        facePath.stroke()
-
-        let smiliness = -0.4
-
-        bezierPathForEye(.Left).stroke()
-        bezierPathForEye(.Right).stroke()
-        bezierPathForSmile(smiliness).stroke()
     }
 }
